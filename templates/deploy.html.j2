@@ -1,0 +1,12 @@
+{% extends "base.html.j2" %}
+
+{% block title %}Fazer deploy do container{% endblock %}
+
+{% block content %}
+    <form method="post" class="flex flex-col gap-4" enctype="multipart/form-data">
+        <h1 class="text-center font-bold text-lg">Fazer deploy do conteiner</h1>
+        <input type="text" name="name" placeholder="Nome" class="p-2 rounded border border-gray-400">
+        <input type="file" name="file" placeholder="Arquivo">
+        <button type="submit" class="rounded bg-blue-500 p-2 text-white">Fazer Deploy</button>
+    </form>
+{% endblock content %}
