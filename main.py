@@ -1,17 +1,17 @@
+import zipfile
 from collections import defaultdict
 from typing import Annotated, BinaryIO
 
-import aiodocker
+import aiofiles
 from fastapi import BackgroundTasks, FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi_socketio import SocketManager
+from python_on_whales import docker
 from slugify import slugify
 
 from prisma import Prisma
-
-docker = aiodocker.Docker()
 
 prisma = Prisma()
 
@@ -35,10 +35,15 @@ async def join(sid, data):
 async def startup():
     await prisma.connect()
 
-    info = await docker.system.info()
+    info = docker.system.info()
 
-    if info["Swarm"]["LocalNodeState"] == "inactive":
-        await docker.swarm.init()
+    if info.swarm.local_node_state == "inactive":
+        docker.swarm.init()
+
+    networks = docker.network.list(filters={"name": "traefik_proxy"})
+
+    if not networks:
+        docker.network.create(name="traefik_proxy", driver="overlay")
 
 
 @app.on_event("shutdown")
@@ -53,36 +58,35 @@ def deploy_page(request: Request):
 
 
 async def deploy_service(slug: str, file: BinaryIO, app_id: int):
-    stream = docker.images.build(
-        fileobj=file.file,
-        tag=slug,
-        stream=True,
-        encoding="utf-8",
-        rm=True
-    )
+    async with aiofiles.tempfile.TemporaryDirectory() as tmp_dir:
+        async with aiofiles.tempfile.NamedTemporaryFile(dir=tmp_dir, suffix=".zip") as tmp_file:
+            await tmp_file.write(await file.read())
+            await tmp_file.seek(0)
+            await tmp_file.flush()
 
-    async for line in stream:
-        if line.get("stream"):
-            logs_map[slug].append(line["stream"])
-            await socket.emit("build", [line["stream"]], room=f"build_{slug}")
-        elif line.get("errorDetail"):
-            await socket.emit("error", line["errorDetail"]["message"], room=f"build_{slug}")
+            with zipfile.ZipFile(tmp_file.name, "r") as zip_ref:
+                zip_ref.extractall(tmp_dir)
 
-    service = await docker.services.create(
-        task_template={
-            "ContainerSpec": {
-                "Image": slug
-            }
-        },
-        name=slug
-    )
+            stream = docker.build(
+                context_path=tmp_dir,
+                stream_logs=True,
+                tags=[slug]
+            )
+
+            for line in stream:
+                logs_map[f"build_{slug}"].append(line)
+                await socket.emit("build", [line], room=f"build_{slug}")
+
+    service = docker.service.create(image=slug, command=None)
 
     await prisma.service.create(
         data={
-            "id": service["ID"],
+            "id": service.id,
             "appId": app_id
         }
     )
+
+    del logs_map[f"build_{slug}"]
 
 
 @app.post("/deploy", response_class=RedirectResponse, status_code=302)
