@@ -16,6 +16,8 @@ prisma = "^0.9.1"
 python-slugify = "^8.0.1"
 fastapi-socketio = "^0.0.10"
 python-on-whales = "^0.62.0"
+rich = "^13.4.2"
+passlib = "^1.7.4"
 
 [tool.poetry.group.dev.dependencies]
 uvicorn = {extras = ["standard"], version = "^0.22.0"}

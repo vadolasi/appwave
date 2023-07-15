@@ -1,3 +1,4 @@
+import os
 import zipfile
 from collections import defaultdict
 from typing import Annotated, BinaryIO
@@ -8,7 +9,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi_socketio import SocketManager
+from passlib.hash import apr_md5_crypt
 from python_on_whales import docker
+from rich.prompt import Prompt
 from slugify import slugify
 
 from prisma import Prisma
@@ -23,7 +26,6 @@ socket = SocketManager(app=app)
 templates = Jinja2Templates(directory="templates")
 
 logs_map: dict[str, list[str]] = defaultdict(list)
-
 
 @socket.on("join")
 async def join(sid, data):
@@ -40,10 +42,26 @@ async def startup():
     if info.swarm.local_node_state == "inactive":
         docker.swarm.init()
 
-    networks = docker.network.list(filters={"name": "traefik_proxy"})
+    networks = docker.network.list(filters={"name": "traefik-public"})
 
     if not networks:
-        docker.network.create(name="traefik_proxy", driver="overlay")
+        docker.network.create(name="traefik-public", driver="overlay")
+        docker.node.update(info.swarm.node_id, labels_add={"traefik-public.traefik-public-certificates": "1"})
+
+        email = Prompt.ask("Enter your email address for Let's Encrypt")
+        domain = Prompt.ask("Enter your domain name")
+        username = Prompt.ask("Enter your username")
+        password = Prompt.ask("Enter your password", password=True)
+
+        os.environ["EMAIL"] = email
+        os.environ["DOMAIN"] = domain
+        os.environ["USERNAME"] = username
+        os.environ["HASHED_PASSWORD"] = apr_md5_crypt.hash(password)
+
+        docker.stack.deploy(
+            compose_files="./stacks/traefik-host.yml",
+            name="traefik"
+        )
 
 
 @app.on_event("shutdown")
@@ -67,15 +85,15 @@ async def deploy_service(slug: str, file: BinaryIO, app_id: int):
             with zipfile.ZipFile(tmp_file.name, "r") as zip_ref:
                 zip_ref.extractall(tmp_dir)
 
-            stream = docker.build(
-                context_path=tmp_dir,
-                stream_logs=True,
-                tags=[slug]
-            )
+        stream = docker.build(
+            context_path=tmp_dir,
+            stream_logs=True,
+            tags=[slug]
+        )
 
-            for line in stream:
-                logs_map[f"build_{slug}"].append(line)
-                await socket.emit("build", [line], room=f"build_{slug}")
+        for line in stream:
+            logs_map[f"build_{slug}"].append(line)
+            await socket.emit("build", [line], room=f"build_{slug}")
 
     service = docker.service.create(image=slug, command=None)
 
