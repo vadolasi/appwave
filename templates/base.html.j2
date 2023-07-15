@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=devicewidth, initial-scale=1.0">
     <title>{% block title %}{{ title }}{% endblock title %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="{{ url_for('static', path='/socket.io.min.js') }}"></script>
+    {% if load_terminal is not defined or load_terminal %}
+        <script src="https://cdn.jsdelivr.net/npm/xterm@5.2.1/lib/xterm.min.js"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.2.1/css/xterm.min.css">
+        <script src="{{ url_for('static', path='/socket.io.min.js') }}"></script>
+    {% endif %}
 </head>
 <body class="min-h-screen flex items-center justify-center p-12">
     {% block content %}{% endblock content %}

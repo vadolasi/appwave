@@ -57,7 +57,8 @@ async def deploy_service(slug: str, file: BinaryIO, app_id: int):
         fileobj=file.file,
         tag=slug,
         stream=True,
-        encoding="utf-8"
+        encoding="utf-8",
+        rm=True
     )
 
     async for line in stream:
