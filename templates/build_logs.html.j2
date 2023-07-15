@@ -1,0 +1,28 @@
+{% extends "base.html.j2" %}
+
+{% block title %}{{ slug }} - Build{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+
+    <div id="logs"></div>
+
+    <script type="text/javascript">
+        const socket = io("/", {
+            path: "/ws/socket.io"
+        })
+
+        socket.on("connect", () => {
+            socket.emit("join", "build_{{ slug }}")
+        })
+
+        socket.on("build", logs => {
+            const logsDiv = document.getElementById("logs")
+            logs.map(log => {
+                const p = document.createElement("p")
+                p.innerText = log
+                logsDiv.appendChild(p)
+            })
+        })
+    </script>
+{% endblock %}

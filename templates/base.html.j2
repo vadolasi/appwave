@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=devicewidth, initial-scale=1.0">
     <title>{% block title %}{{ title }}{% endblock title %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ url_for('static', path='/socket.io.min.js') }}"></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-12">
     {% block content %}{% endblock content %}

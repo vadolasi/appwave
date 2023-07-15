@@ -15,6 +15,7 @@ aiofiles = "^23.1.0"
 aiodocker = "^0.21.0"
 prisma = "^0.9.1"
 python-slugify = "^8.0.1"
+fastapi-socketio = "^0.0.10"
 
 [tool.poetry.group.dev.dependencies]
 uvicorn = {extras = ["standard"], version = "^0.22.0"}
