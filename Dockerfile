@@ -20,6 +20,7 @@ RUN pip install poetry && \
 
 COPY . /app/
 
-EXPOSE 8080
+ENV ENV=production
+EXPOSE 80
 
-CMD hypercorn app.main:app --worker-class trio --bind 0.0.0.0:8080
+CMD python app/main.py

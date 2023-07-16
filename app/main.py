@@ -11,13 +11,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi_socketio import SocketManager
 from passlib.hash import apr_md5_crypt
-from python_on_whales import DockerClient
+from python_on_whales import docker
 from rich.prompt import Prompt
 from slugify import slugify
 
 from prisma import Prisma
-
-docker = DockerClient()
 
 ROOT_PATH = Path(__file__).parent.parent.absolute()
 
@@ -31,6 +29,8 @@ socket = SocketManager(app=app)
 templates = Jinja2Templates(directory="templates")
 
 logs_map: dict[str, list[str]] = defaultdict(list)
+
+ENV = os.environ.get("ENV", "dev")
 
 
 @socket.on("join")
@@ -52,7 +52,7 @@ async def startup():
 
     if not networks:
         docker.network.create(name="traefik-public", driver="overlay")
-        docker.node.update(info.swarm.node_id, labels_add={"traefik-public.traefik-public-certificates": "1"})
+        docker.node.update(info.swarm.node_id, labels_add={"traefik-public.traefik-public-certificates": "true"})
 
         email = Prompt.ask("Enter your email address for Let's Encrypt")
         domain = Prompt.ask("Enter your domain name")
@@ -146,4 +146,4 @@ async def build_logs(request: Request, slug: str):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=ENV == "dev")
