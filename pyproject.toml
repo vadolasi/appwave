@@ -4,7 +4,6 @@ version = "0.1.0"
 description = ""
 authors = ["Vitor Daniel <vitor036daniel@gmail.com>"]
 readme = "README.md"
-packages = [{include = "swarm_manager"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -18,6 +17,7 @@ fastapi-socketio = "^0.0.10"
 python-on-whales = "^0.62.0"
 rich = "^13.4.2"
 passlib = "^1.7.4"
+hypercorn = {extras = ["trio"], version = "^0.14.4"}
 
 [tool.poetry.group.dev.dependencies]
 uvicorn = {extras = ["standard"], version = "^0.22.0"}

@@ -1,6 +1,7 @@
 import os
 import zipfile
 from collections import defaultdict
+from pathlib import Path
 from typing import Annotated, BinaryIO
 
 import aiofiles
@@ -10,11 +11,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi_socketio import SocketManager
 from passlib.hash import apr_md5_crypt
-from python_on_whales import docker
+from python_on_whales import DockerClient
 from rich.prompt import Prompt
 from slugify import slugify
 
 from prisma import Prisma
+
+docker = DockerClient()
+
+ROOT_PATH = Path(__file__).parent.parent.absolute()
 
 prisma = Prisma()
 
@@ -26,6 +31,7 @@ socket = SocketManager(app=app)
 templates = Jinja2Templates(directory="templates")
 
 logs_map: dict[str, list[str]] = defaultdict(list)
+
 
 @socket.on("join")
 async def join(sid, data):
@@ -59,7 +65,7 @@ async def startup():
         os.environ["HASHED_PASSWORD"] = apr_md5_crypt.hash(password)
 
         docker.stack.deploy(
-            compose_files="./stacks/traefik-host.yml",
+            compose_files=ROOT_PATH / "stacks" / "traefik-host.yml",
             name="traefik"
         )
 
